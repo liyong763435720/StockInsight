@@ -245,10 +245,22 @@ async def change_password(data: Dict = Body(...), session_id: Optional[str] = Co
         if not old_password or not new_password:
             return {"success": False, "message": "旧密码和新密码不能为空"}
         
+        # 验证新密码强度
+        if len(new_password) < 8:
+            return {"success": False, "message": "新密码长度至少8位"}
+        
+        import re
+        if not re.search(r'[a-zA-Z]', new_password) or not re.search(r'[0-9]', new_password):
+            return {"success": False, "message": "新密码必须包含字母和数字"}
+        
         # 验证旧密码
         user_info = db.get_user_by_id(user['id'])
         if not auth.verify_password(old_password, user_info['password_hash']):
             return {"success": False, "message": "旧密码错误"}
+        
+        # 检查新密码是否与旧密码相同
+        if auth.verify_password(new_password, user_info['password_hash']):
+            return {"success": False, "message": "新密码不能与旧密码相同"}
         
         # 更新密码
         db.update_user(user['id'], password=new_password)

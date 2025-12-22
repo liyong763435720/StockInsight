@@ -4,6 +4,11 @@ let currentUser = null;
 
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', function() {
+    // 设置当前年份
+    const currentYearElement = document.getElementById('current-year');
+    if (currentYearElement) {
+        currentYearElement.textContent = new Date().getFullYear();
+    }
     checkLoginStatus();
 });
 
@@ -1470,6 +1475,7 @@ function showLoginPage() {
     document.getElementById('main-content').style.display = 'none';
     document.getElementById('logout-btn').style.display = 'none';
     document.getElementById('current-user-info').style.display = 'none';
+    document.getElementById('account-settings-link').style.display = 'none';
     currentUser = null;
 }
 
@@ -1479,6 +1485,7 @@ function showMainContent() {
     document.getElementById('main-content').style.display = 'block';
     document.getElementById('logout-btn').style.display = 'block';
     document.getElementById('current-user-info').style.display = 'block';
+    document.getElementById('account-settings-link').style.display = 'block';
     
     // 显示用户信息
     if (currentUser) {
@@ -1504,6 +1511,7 @@ function showMainContent() {
     loadDataSources();
     initStockAnalysisTypeToggle();
     initStockAutocomplete();
+    initPasswordStrengthIndicator();
     
     // 如果是管理员，加载用户列表和系统配置
     if (currentUser && currentUser.role === 'admin') {
@@ -2008,13 +2016,20 @@ async function deleteUser(userId) {
     }
 }
 
-// 修改密码
+// 修改密码（用户管理页面，管理员使用）
 async function changePassword() {
     const oldPassword = document.getElementById('old-password').value;
     const newPassword = document.getElementById('new-password').value;
     
     if (!oldPassword || !newPassword) {
         alert('请输入旧密码和新密码');
+        return;
+    }
+    
+    // 验证密码强度
+    const strengthResult = validatePasswordStrength(newPassword);
+    if (!strengthResult.valid) {
+        alert('密码强度不足：' + strengthResult.message);
         return;
     }
     
@@ -2042,6 +2057,150 @@ async function changePassword() {
         }
     } catch (error) {
         alert('修改密码失败: ' + error.message);
+    }
+}
+
+// 修改账户密码（账户设置页面，所有用户使用）
+async function changeAccountPassword() {
+    const oldPassword = document.getElementById('account-old-password').value;
+    const newPassword = document.getElementById('account-new-password').value;
+    const confirmPassword = document.getElementById('account-confirm-password').value;
+    
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        alert('请填写所有密码字段');
+        return;
+    }
+    
+    // 验证两次密码是否一致
+    if (newPassword !== confirmPassword) {
+        document.getElementById('password-match-error').style.display = 'block';
+        return;
+    } else {
+        document.getElementById('password-match-error').style.display = 'none';
+    }
+    
+    // 验证密码强度
+    const strengthResult = validatePasswordStrength(newPassword);
+    if (!strengthResult.valid) {
+        alert('密码强度不足：' + strengthResult.message);
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                old_password: oldPassword,
+                new_password: newPassword
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('密码修改成功，请重新登录');
+            // 清空表单
+            document.getElementById('account-old-password').value = '';
+            document.getElementById('account-new-password').value = '';
+            document.getElementById('account-confirm-password').value = '';
+            document.getElementById('password-strength').innerHTML = '';
+            // 可选：自动登出
+            // logout();
+        } else {
+            alert('修改密码失败: ' + result.message);
+        }
+    } catch (error) {
+        alert('修改密码失败: ' + error.message);
+    }
+}
+
+// 验证密码强度
+function validatePasswordStrength(password) {
+    if (!password) {
+        return { valid: false, message: '密码不能为空' };
+    }
+    
+    if (password.length < 8) {
+        return { valid: false, message: '密码长度至少8位' };
+    }
+    
+    // 检查是否包含字母和数字
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    
+    if (!hasLetter || !hasNumber) {
+        return { valid: false, message: '密码必须包含字母和数字' };
+    }
+    
+    return { valid: true, message: '密码强度良好' };
+}
+
+// 实时显示密码强度
+function initPasswordStrengthIndicator() {
+    const passwordInput = document.getElementById('account-new-password');
+    const strengthDiv = document.getElementById('password-strength');
+    
+    if (passwordInput && strengthDiv) {
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            if (!password) {
+                strengthDiv.innerHTML = '';
+                return;
+            }
+            
+            let strength = 0;
+            let feedback = [];
+            
+            if (password.length >= 8) {
+                strength++;
+            } else {
+                feedback.push('长度至少8位');
+            }
+            
+            if (/[a-z]/.test(password)) {
+                strength++;
+            } else {
+                feedback.push('包含小写字母');
+            }
+            
+            if (/[A-Z]/.test(password)) {
+                strength++;
+            } else {
+                feedback.push('包含大写字母');
+            }
+            
+            if (/[0-9]/.test(password)) {
+                strength++;
+            } else {
+                feedback.push('包含数字');
+            }
+            
+            if (/[^a-zA-Z0-9]/.test(password)) {
+                strength++;
+            } else {
+                feedback.push('包含特殊字符');
+            }
+            
+            let strengthText = '';
+            let strengthClass = '';
+            
+            if (strength <= 2) {
+                strengthText = '弱';
+                strengthClass = 'text-danger';
+            } else if (strength <= 3) {
+                strengthText = '中';
+                strengthClass = 'text-warning';
+            } else {
+                strengthText = '强';
+                strengthClass = 'text-success';
+            }
+            
+            strengthDiv.innerHTML = `<span class="${strengthClass}">密码强度: ${strengthText}</span> ${feedback.length > 0 ? '<br><small class="text-muted">建议：' + feedback.slice(0, 2).join('、') + '</small>' : ''}`;
+        });
     }
 }
 

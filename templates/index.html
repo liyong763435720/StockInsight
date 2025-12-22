@@ -117,6 +117,11 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <span class="navbar-text me-3" id="current-user-info" style="display: none;"></span>
+                        <a class="nav-link" href="#" onclick="showTab('account-settings', this); return false;" id="account-settings-link" style="display: none;">
+                            <i class="bi bi-person-gear"></i> 账户设置
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <button class="btn btn-outline-light btn-sm" id="logout-btn" onclick="logout()" style="display: none;">登出</button>
                     </li>
                 </ul>
@@ -145,6 +150,28 @@
                 <div id="login-error" class="alert alert-danger mt-3" style="display: none;"></div>
                 <div class="alert alert-info mt-3">
                     <small><i class="bi bi-info-circle"></i> 如需账号授权，请联系管理员微信：<strong>yyongzf8</strong></small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 合规声明 -->
+        <div class="container mt-4" style="max-width: 900px;">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-shield-check"></i> StockInsight 股票洞察分析系统 - 合规声明</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>使用本系统前，请仔细阅读以下合规声明：</strong></p>
+                    <ol class="small">
+                        <li><strong>数据来源与准确性</strong>：本系统使用的股票数据来源于公开数据源（如akshare、Tushare等），数据仅供参考，不构成投资建议。用户应自行验证数据的准确性。</li>
+                        <li><strong>投资风险提示</strong>：股票投资存在风险，过往表现不代表未来收益。本系统提供的统计分析结果仅供参考，不应作为投资决策的唯一依据。</li>
+                        <li><strong>用户责任</strong>：用户应妥善保管账户信息，不得将账户信息泄露给第三方。用户对其账户下的所有操作负责。</li>
+                        <li><strong>数据使用</strong>：用户应遵守相关法律法规，不得将本系统数据用于非法用途。禁止利用系统进行数据爬取、批量下载等可能影响系统稳定性的操作。</li>
+                        <li><strong>系统可用性</strong>：系统可能因维护、升级等原因暂停服务，不保证100%可用性。用户应做好数据备份。</li>
+                        <li><strong>隐私保护</strong>：系统仅收集必要的用户信息用于身份验证和权限管理，不会向第三方泄露用户信息。</li>
+                        <li><strong>免责声明</strong>：系统运营方不对因使用本系统而产生的任何直接或间接损失承担责任。</li>
+                    </ol>
+                    <p class="text-muted mb-0"><small>最后更新时间：<span id="current-year"></span>年</small></p>
                 </div>
             </div>
         </div>
@@ -526,6 +553,54 @@
                         <button type="button" class="btn btn-primary" onclick="saveConfig()">保存配置</button>
                         <button type="button" class="btn btn-secondary" onclick="loadConfig()">重新加载</button>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 账户设置（所有用户） -->
+        <div id="account-settings" class="tab-content" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-person-gear"></i> 账户设置</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6>修改密码</h6>
+                            <div class="mb-3">
+                                <label class="form-label">当前密码</label>
+                                <input type="password" class="form-control" id="account-old-password" placeholder="请输入当前密码">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">新密码</label>
+                                <input type="password" class="form-control" id="account-new-password" placeholder="请输入新密码（至少8位，包含字母和数字）">
+                                <small class="form-text text-muted">
+                                    <div id="password-strength" class="mt-2"></div>
+                                </small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">确认新密码</label>
+                                <input type="password" class="form-control" id="account-confirm-password" placeholder="请再次输入新密码">
+                                <small class="form-text text-danger" id="password-match-error" style="display: none;">两次输入的密码不一致</small>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="changeAccountPassword()">
+                                <i class="bi bi-key"></i> 修改密码
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6><i class="bi bi-info-circle"></i> 密码安全提示</h6>
+                                    <ul class="small">
+                                        <li>密码长度至少8位</li>
+                                        <li>建议包含大小写字母、数字和特殊字符</li>
+                                        <li>不要使用与用户名相同的密码</li>
+                                        <li>定期更换密码以提高安全性</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
