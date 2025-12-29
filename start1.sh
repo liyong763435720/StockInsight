@@ -1,42 +1,45 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
 
 BASE_DIR=$(cd "$(dirname "$0")" && pwd)
 VENV_DIR="$BASE_DIR/env"
 
 echo "========================================"
-echo "  StockInsight - ¹ÉÆ±¶´²ì·ÖÎöÏµÍ³ v1.0.0"
+echo "  StockInsight - è‚¡ç¥¨æ´žå¯Ÿåˆ†æžç³»ç»Ÿ v1.0.0"
 echo "========================================"
 echo ""
 
-# 1. ¼ì²éÐéÄâ»·¾³
+# 1. æ£€æŸ¥è™šæ‹ŸçŽ¯å¢ƒ
 if [ ! -d "$VENV_DIR" ]; then
-    echo "[´íÎó] Î´ÕÒµ½ÐéÄâ»·¾³ env£¬ÇëÏÈ´´½¨ÐéÄâ»·¾³"
+    echo "[é”™è¯¯] æœªæ‰¾åˆ°è™šæ‹ŸçŽ¯å¢ƒ env"
     exit 1
 fi
 
-# 2. ¼¤»îÐéÄâ»·¾³
+# 2. æ¿€æ´»è™šæ‹ŸçŽ¯å¢ƒ
 source "$VENV_DIR/bin/activate"
 
-echo "[ÐÅÏ¢] Ê¹ÓÃ Python:"
+echo "[ä¿¡æ¯] ä½¿ç”¨ Python:"
 python --version
 
-# 3. ¼ì²éÒÀÀµ
-echo "[ÐÅÏ¢] ¼ì²éÒÀÀµ°ü..."
-python - <<EOF
+# 3. æ£€æŸ¥å…³é”®ä¾èµ–
+echo "[ä¿¡æ¯] æ£€æŸ¥ä¾èµ–..."
+python - <<'EOF'
 import fastapi, akshare
-print("ÒÀÀµ¼ì²éÍ¨¹ý")
+print("ä¾èµ–æ£€æŸ¥é€šè¿‡")
 EOF
 
 if [ $? -ne 0 ]; then
-    echo "[ÐÅÏ¢] ÕýÔÚ°²×°ÒÀÀµ°ü..."
+    echo "[ä¿¡æ¯] æ­£åœ¨å®‰è£…ä¾èµ–..."
     pip install -r requirements.txt || exit 1
 fi
 
-# 4. Æô¶¯·þÎñ£¨Éú²ú»·¾³£¬²»ÓÃ reload£©
 echo ""
-echo "[ÐÅÏ¢] Æô¶¯·þÎñ..."
-echo "[ÐÅÏ¢] ·þÎñµØÖ·: http://localhost:8588"
-echo "[ÐÅÏ¢] °´ Ctrl+C Í£Ö¹·þÎñ"
+echo "[ä¿¡æ¯] å¯åŠ¨æœåŠ¡..."
+echo "[ä¿¡æ¯] æœåŠ¡åœ°å€: http://localhost:8588"
+echo "[ä¿¡æ¯] æŒ‰ Ctrl+C åœæ­¢æœåŠ¡"
 echo ""
 
-python main.py
+# âš ï¸ ç”Ÿäº§çŽ¯å¢ƒï¼šç»å¯¹ä¸è¦ --reload
+python -m uvicorn app.api:app \
+    --host 0.0.0.0 \
+    --port 8588
