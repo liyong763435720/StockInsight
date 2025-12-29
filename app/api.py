@@ -26,7 +26,15 @@ app = FastAPI(title="StockInsight - 股票洞察分析系统")
 db = Database()
 config = Config()
 statistics = Statistics(db)
-updater = DataUpdater(db, config)
+
+# 初始化DataUpdater时捕获可能的错误
+try:
+    updater = DataUpdater(db, config)
+except Exception as e:
+    print(f"警告: DataUpdater初始化失败: {e}")
+    print("系统将继续运行，但数据更新功能可能不可用")
+    updater = None
+
 auth = AuthManager(db)
 
 # 定期清理过期会话
@@ -567,6 +575,8 @@ async def update_data(background_tasks: BackgroundTasks, data: Dict = Body(defau
                      session_id: Optional[str] = Cookie(None)):
     """更新数据（需要数据管理权限）"""
     auth.require_permission(session_id, 'data_management')
+    if updater is None:
+        return {"success": False, "message": "数据更新功能不可用，请检查数据源配置"}
     try:
         update_type = data.get('update_type', 'incremental')
         
@@ -640,8 +650,9 @@ async def update_config(data: Dict = Body(...), session_id: Optional[str] = Cook
             config.set(key, value)
         
         # 重新初始化数据源（同时更新fetcher和data_source）
-        updater.fetcher = DataFetcher(config)
-        updater.data_source = config.get('data_source', 'akshare')
+        if updater is not None:
+            updater.fetcher = DataFetcher(config)
+            updater.data_source = config.get('data_source', 'akshare')
         
         return {"success": True, "message": "配置已更新"}
     except Exception as e:
