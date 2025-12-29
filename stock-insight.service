@@ -4,16 +4,27 @@ After=network.target
 
 [Service]
 Type=simple
+# 根据系统选择用户（Ubuntu/Debian使用www-data，CentOS使用apache或nobody）
+# 如果www-data不存在，可以改为nobody或创建专用用户
 User=www-data
+Group=www-data
 WorkingDirectory=/opt/stock-insight
+# 使用which python3自动查找Python路径，或根据实际情况修改
 ExecStart=/usr/bin/python3 /opt/stock-insight/start_prod.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# 环境变量（可选）
+# 环境变量
 Environment="PYTHONUNBUFFERED=1"
+Environment="DB_PATH=/opt/stock-insight/stock_data.db"
+Environment="CONFIG_PATH=/opt/stock-insight/config.json"
+
+# 资源限制（可选，根据服务器配置调整）
+# LimitNOFILE=65536
+# MemoryMax=2G
+# CPUQuota=200%
 
 [Install]
 WantedBy=multi-user.target
