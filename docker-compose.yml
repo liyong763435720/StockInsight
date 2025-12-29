@@ -18,8 +18,7 @@ services:
       - CONFIG_PATH=/app/data/config.json
     restart: unless-stopped
     healthcheck:
-      # 使用根路径进行健康检查（不需要认证）
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8588/').read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8588/api/auth/current-user')"]
       interval: 30s
       timeout: 10s
       retries: 3

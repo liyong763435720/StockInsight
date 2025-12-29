@@ -40,7 +40,21 @@ class DataFetcher:
             self.finnhub_key = self.config.get('finnhub.api_key', '')
         elif self.data_source == 'akshare':
             if not AKSHARE_AVAILABLE:
-                raise ImportError("akshare未安装，请使用: pip install akshare")
+                print("[警告] akshare未安装，尝试自动降级到baostock数据源")
+                print("[提示] 如需使用akshare，请运行: pip install 'akshare>=1.17,<3.0'")
+                # 自动降级到baostock（免费且不需要token）
+                self.data_source = 'baostock'
+                try:
+                    lg = bs.login()
+                    if lg.error_code != '0':
+                        raise Exception(f"BaoStock登录失败: {lg.error_msg}")
+                    print("[信息] 已切换到baostock数据源")
+                except Exception as e:
+                    raise ImportError(
+                        f"akshare未安装且baostock初始化失败。\n"
+                        f"请安装akshare: pip install 'akshare>=1.17,<3.0'\n"
+                        f"或配置其他数据源（tushare/baostock/finnhub）"
+                    )
     
     def get_stock_list(self) -> pd.DataFrame:
         """获取股票列表"""

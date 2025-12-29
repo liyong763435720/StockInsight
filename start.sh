@@ -19,10 +19,23 @@ echo "[信息] 检查依赖包..."
 python3 -c "import fastapi" 2>/dev/null
 if [ $? -ne 0 ]; then
     echo "[信息] 正在安装依赖包..."
-    pip3 install -r requirements.txt
+    pip3 install -r requirements.txt --root-user-action=ignore
     if [ $? -ne 0 ]; then
         echo "[错误] 依赖包安装失败"
         exit 1
+    fi
+fi
+
+# 特别检查akshare是否安装（因为它是可选但常用的）
+echo "[信息] 检查akshare..."
+python3 -c "import akshare" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "[信息] akshare未安装，正在安装..."
+    pip3 install "akshare>=1.17,<3.0" --root-user-action=ignore
+    if [ $? -ne 0 ]; then
+        echo "[警告] akshare安装失败，将无法使用akshare数据源"
+    else
+        echo "[信息] akshare安装成功"
     fi
 fi
 
