@@ -27,62 +27,72 @@
    - 打开浏览器访问：http://localhost:8588
    - 默认管理员账号：`admin` / `admin123`
 
-### Linux 部署
+### Linux 部署（推荐：一键部署）
 
-1. **安装Python3**
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get update
-   sudo apt-get install python3 python3-pip -y
-   
-   # CentOS/RHEL
-   sudo yum install python3 python3-pip -y
-   ```
+**方式一：一键部署脚本（自动配置systemd服务和开机自启）**
 
-2. **部署系统**
-   ```bash
-   # 解压或克隆项目到目标目录
-   cd /opt/gpfx2
-   
-   # 添加执行权限
-   chmod +x start.sh
-   
-   # 运行启动脚本（会自动安装依赖）
-   ./start.sh
-   ```
+```bash
+# 1. 解压或克隆项目到目标目录
+cd /opt/stock-insight  # 或你的项目目录
+
+# 2. 添加执行权限
+chmod +x install.sh
+
+# 3. 运行一键部署脚本（需要root权限）
+sudo ./install.sh
+```
+
+脚本会自动完成：
+- ✅ 检查Python环境
+- ✅ 安装依赖包
+- ✅ 创建systemd服务文件
+- ✅ 配置防火墙（如果启用）
+- ✅ 启动服务并设置开机自启
+
+**方式二：手动部署（不配置服务）**
+
+```bash
+# 1. 安装Python3
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install python3 python3-pip -y
+
+# CentOS/RHEL
+sudo yum install python3 python3-pip -y
+
+# 2. 部署系统
+cd /opt/stock-insight
+
+# 添加执行权限
+chmod +x install.sh start.sh
+
+# 仅安装依赖（不配置服务）
+sudo ./install.sh --no-service
+
+# 3. 启动服务（前台运行，用于测试）
+./start.sh
+```
 
 3. **访问系统**
    - 打开浏览器访问：http://服务器IP:8588
    - 默认管理员账号：`admin` / `admin123`
 
-### 后台运行（Linux）
+### 后台运行和开机自启（Linux）
 
-使用 `nohup` 或 `systemd` 服务：
+**推荐：使用一键部署脚本（自动配置）**
 
-**方式1：使用 nohup（简单快速）**
-```bash
-# 启动服务（后台运行）
-nohup python3 start_prod.py > app.log 2>&1 &
+运行 `sudo ./install.sh` 会自动配置systemd服务并设置开机自启。
 
-# 查看进程
-ps aux | grep start_prod.py
+**手动配置systemd服务：**
 
-# 查看日志
-tail -f app.log
-
-# 停止服务（需要先找到进程ID）
-ps aux | grep start_prod.py
-kill <PID>
-```
-
-**方式2：使用 systemd（推荐，自动重启）**
+如果自动配置失败，可以手动配置：
 
 1. 复制服务文件到系统目录：
 ```bash
 # 将项目中的 stock-insight.service 复制到系统目录
 sudo cp stock-insight.service /etc/systemd/system/stock-insight.service
 
-# 或者手动创建服务文件
+# 编辑服务文件，修改路径和用户
 sudo nano /etc/systemd/system/stock-insight.service
 ```
 
@@ -94,9 +104,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-WorkingDirectory=/opt/stock-insight
-ExecStart=/usr/bin/python3 /opt/stock-insight/start_prod.py
+User=www-data  # 修改为实际运行用户
+WorkingDirectory=/opt/stock-insight  # 修改为实际项目路径
+ExecStart=/usr/bin/python3 /opt/stock-insight/start_prod.py  # 修改为实际路径
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -132,6 +142,22 @@ sudo systemctl restart stock-insight
 
 # 禁用开机自启
 sudo systemctl disable stock-insight
+```
+
+**使用 nohup（简单快速，但不支持自动重启）**
+```bash
+# 启动服务（后台运行）
+nohup python3 start_prod.py > app.log 2>&1 &
+
+# 查看进程
+ps aux | grep start_prod.py
+
+# 查看日志
+tail -f app.log
+
+# 停止服务（需要先找到进程ID）
+ps aux | grep start_prod.py
+kill <PID>
 ```
 
 **方式3：使用 screen（适合临时测试）**

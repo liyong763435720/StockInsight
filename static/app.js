@@ -31,6 +31,27 @@ function showTab(tabName, eventElement) {
     } else if (window.event && window.event.target) {
         window.event.target.classList.add('active');
     }
+    
+    // 如果切换到首页，加载公告并更新快速入口
+    if (tabName === 'home') {
+        loadAnnouncements();
+        updateQuickAccessButtons();
+    }
+    
+    // 如果切换到系统配置标签页，加载配置和数据状态
+    if (tabName === 'config') {
+        // 检查是否有管理员权限
+        if (currentUser && currentUser.role === 'admin') {
+            loadConfig();
+            // 加载数据状态（如果有数据管理权限）
+            if (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.includes('data_management'))) {
+                loadDataStatus();
+                checkAndShowProgress();
+            }
+            // 加载公告管理列表
+            loadAnnouncementsManagement();
+        }
+    }
 }
 
 // 加载数据状态
@@ -44,6 +65,7 @@ async function loadDataStatus() {
             const data = result.data;
             let html = `
                 <strong>股票总数:</strong> ${data.total_stocks || 0}<br>
+                <strong>数据总量:</strong> ${(data.total_data_count || 0).toLocaleString()}<br>
                 <strong>最新数据日期:</strong> ${data.latest_date || '无'}
             `;
             
@@ -67,9 +89,12 @@ async function loadDataStatus() {
             
             document.getElementById('data-status').innerHTML = html;
         } else {
-            // 如果没有权限，显示提示
-            if (result.message && result.message.includes('权限')) {
+            // 如果请求失败，显示错误信息
+            let errorMsg = result.message || '加载失败';
+            if (errorMsg.includes('权限') || errorMsg.includes('permission')) {
                 document.getElementById('data-status').innerHTML = '<div class="alert alert-warning">您没有数据管理权限</div>';
+            } else {
+                document.getElementById('data-status').innerHTML = `<div class="alert alert-danger">${errorMsg}</div>`;
             }
         }
     } catch (error) {
@@ -78,10 +103,11 @@ async function loadDataStatus() {
     }
 }
 
-// 更新数据（仅管理员）
+// 更新数据（需要数据管理权限）
 async function updateData(type) {
-    if (!currentUser || currentUser.role !== 'admin') {
-        alert('需要管理员权限');
+    // 检查是否有数据管理权限（管理员或有data_management权限的用户）
+    if (!currentUser || (currentUser.role !== 'admin' && (!currentUser.permissions || !currentUser.permissions.includes('data_management')))) {
+        alert('需要数据管理权限');
         return;
     }
     try {
@@ -875,6 +901,8 @@ async function saveConfig() {
         const result = await response.json();
         if (result.success) {
             alert('配置已保存');
+            // 保存成功后重新加载配置，确保显示最新值
+            await loadConfig();
         } else {
             alert('保存失败: ' + (result.message || '未知错误'));
         }
@@ -1513,6 +1541,12 @@ function showMainContent() {
     initStockAutocomplete();
     initPasswordStrengthIndicator();
     
+    // 加载首页公告
+    loadAnnouncements();
+    
+    // 更新快速入口按钮（根据权限）
+    updateQuickAccessButtons();
+    
     // 如果是管理员，加载用户列表和系统配置
     if (currentUser && currentUser.role === 'admin') {
         loadUsers();
@@ -1524,6 +1558,13 @@ function showMainContent() {
 function setDefaultTab() {
     if (!currentUser) return;
     
+    // 默认显示首页
+    const homeNavItem = document.querySelector('.navbar-nav .nav-item a[onclick*="showTab(\'home\'"]');
+    if (homeNavItem) {
+        showTab('home', homeNavItem);
+        return;
+    }
+    
     const permissions = currentUser.permissions || [];
     const isAdmin = currentUser.role === 'admin';
     
@@ -1532,8 +1573,7 @@ function setDefaultTab() {
         'stock-analysis',      // 单只股票分析（优先）
         'month-filter',        // 月份筛选统计
         'industry-analysis',   // 行业分析
-        'source-compare',      // 数据源对比
-        'data-management'      // 数据管理（最后）
+        'source-compare'       // 数据源对比
     ];
     
     // 权限映射
@@ -1541,11 +1581,10 @@ function setDefaultTab() {
         'stock-analysis': ['stock_analysis_single', 'stock_analysis_multi'],
         'month-filter': ['month_filter'],
         'industry-analysis': ['industry_statistics', 'industry_top_stocks'],
-        'source-compare': ['source_compare'],
-        'data-management': ['data_management']
+        'source-compare': ['source_compare']
     };
     
-    // 如果是管理员，默认显示单只股票分析
+    // 如果是管理员，默认显示单只股票分析（如果首页不存在）
     if (isAdmin) {
         const navItem = document.querySelector('.navbar-nav .nav-item a[onclick*="showTab(\'stock-analysis\'"]');
         if (navItem) {
@@ -1615,8 +1654,8 @@ function updateUIByPermissions() {
         'month_filter': ['month-filter'],
         'industry_statistics': ['industry-analysis'],
         'industry_top_stocks': ['industry-analysis'],
-        'source_compare': ['source-compare'],
-        'data_management': ['data-management']
+        'source_compare': ['source-compare']
+        // 注意：data_management权限现在在config标签页中，由管理员权限控制
     };
     
     // 先显示所有标签页（除了admin-only的）
@@ -1683,6 +1722,47 @@ function updateUIByPermissions() {
         document.querySelectorAll('button[onclick*="export"]').forEach(btn => {
             btn.style.display = '';
         });
+    }
+    
+    // 更新首页快速入口按钮的显示
+    updateQuickAccessButtons();
+}
+
+// 更新首页快速入口按钮的显示（根据权限）
+function updateQuickAccessButtons() {
+    if (!currentUser) return;
+    
+    const permissions = currentUser.permissions || [];
+    const isAdmin = currentUser.role === 'admin';
+    const quickAccessButtons = document.querySelectorAll('.quick-access-btn');
+    const noQuickAccessMsg = document.getElementById('no-quick-access');
+    
+    let visibleCount = 0;
+    
+    quickAccessButtons.forEach(btn => {
+        const requiredPerms = btn.getAttribute('data-permissions').split(',');
+        
+        // 管理员显示所有按钮
+        if (isAdmin) {
+            btn.style.display = '';
+            visibleCount++;
+        } else {
+            // 检查用户是否有任一所需权限
+            const hasPermission = requiredPerms.some(perm => permissions.includes(perm.trim()));
+            if (hasPermission) {
+                btn.style.display = '';
+                visibleCount++;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+    });
+    
+    // 如果没有可见的快速入口，显示提示信息
+    if (visibleCount === 0 && noQuickAccessMsg) {
+        noQuickAccessMsg.style.display = 'block';
+    } else if (noQuickAccessMsg) {
+        noQuickAccessMsg.style.display = 'none';
     }
 }
 
@@ -2352,6 +2432,255 @@ async function savePermissions() {
         }
     } catch (error) {
         alert('保存权限失败: ' + error.message);
+    }
+}
+
+// ========== 公告管理 ==========
+
+// 加载首页公告列表
+async function loadAnnouncements() {
+    try {
+        const response = await fetch('/api/announcements?limit=10', {
+            credentials: 'include'
+        });
+        const result = await response.json();
+        if (result.success) {
+            const announcements = result.data;
+            const container = document.getElementById('announcements-list');
+            
+            if (announcements.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-inbox"></i> 暂无公告</div>';
+                return;
+            }
+            
+            let html = '';
+            announcements.forEach(announcement => {
+                const date = formatDateTime(announcement.created_at);
+                const pinnedBadge = announcement.is_pinned ? '<span class="badge bg-danger ms-2">置顶</span>' : '';
+                html += `
+                    <div class="card mb-3 ${announcement.is_pinned ? 'border-danger' : ''}">
+                        <div class="card-header ${announcement.is_pinned ? 'bg-danger text-white' : 'bg-light'}">
+                            <h6 class="mb-0">
+                                ${announcement.is_pinned ? '<i class="bi bi-pin-angle-fill"></i> ' : ''}
+                                ${announcement.title}
+                                ${pinnedBadge}
+                            </h6>
+                            <small class="text-muted">${date} | 发布者: ${announcement.created_by_name}</small>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">${announcement.content.replace(/\n/g, '<br>')}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } else {
+            document.getElementById('announcements-list').innerHTML = 
+                '<div class="alert alert-danger">加载公告失败: ' + (result.message || '未知错误') + '</div>';
+        }
+    } catch (error) {
+        console.error('Error loading announcements:', error);
+        document.getElementById('announcements-list').innerHTML = 
+            '<div class="alert alert-danger">加载公告失败</div>';
+    }
+}
+
+// 加载公告管理列表（管理员）
+async function loadAnnouncementsManagement() {
+    if (!currentUser || currentUser.role !== 'admin') {
+        return;
+    }
+    try {
+        const response = await fetch('/api/announcements/all', {
+            credentials: 'include'
+        });
+        const result = await response.json();
+        if (result.success) {
+            const announcements = result.data;
+            const container = document.getElementById('announcements-management-list');
+            
+            if (announcements.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3"><i class="bi bi-inbox"></i> 暂无公告</div>';
+                return;
+            }
+            
+            let html = '<div class="table-responsive"><table class="table table-hover">';
+            html += '<thead><tr><th>标题</th><th>发布时间</th><th>发布者</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+            
+            announcements.forEach(announcement => {
+                const date = formatDateTime(announcement.created_at);
+                const pinnedBadge = announcement.is_pinned ? 
+                    '<span class="badge bg-danger">置顶</span>' : 
+                    '<span class="badge bg-secondary">普通</span>';
+                html += `
+                    <tr>
+                        <td>${announcement.title}</td>
+                        <td>${date}</td>
+                        <td>${announcement.created_by_name}</td>
+                        <td>${pinnedBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editAnnouncement(${announcement.id})">
+                                <i class="bi bi-pencil"></i> 编辑
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteAnnouncement(${announcement.id})">
+                                <i class="bi bi-trash"></i> 删除
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        } else {
+            document.getElementById('announcements-management-list').innerHTML = 
+                '<div class="alert alert-danger">加载公告失败: ' + (result.message || '未知错误') + '</div>';
+        }
+    } catch (error) {
+        console.error('Error loading announcements management:', error);
+        document.getElementById('announcements-management-list').innerHTML = 
+            '<div class="alert alert-danger">加载公告失败</div>';
+    }
+}
+
+// 显示公告编辑模态框
+function showAnnouncementModal(announcementId = null) {
+    const modal = new bootstrap.Modal(document.getElementById('announcementModal'));
+    const titleEl = document.getElementById('announcementModalTitle');
+    const form = document.getElementById('announcementForm');
+    
+    // 重置表单
+    form.reset();
+    document.getElementById('announcement-id').value = '';
+    
+    if (announcementId) {
+        // 编辑模式
+        titleEl.textContent = '编辑公告';
+        loadAnnouncementForEdit(announcementId);
+    } else {
+        // 新建模式
+        titleEl.textContent = '发布公告';
+    }
+    
+    modal.show();
+}
+
+// 加载公告用于编辑
+async function loadAnnouncementForEdit(announcementId) {
+    try {
+        const response = await fetch('/api/announcements/all', {
+            credentials: 'include'
+        });
+        const result = await response.json();
+        if (result.success) {
+            const announcement = result.data.find(a => a.id === announcementId);
+            if (announcement) {
+                document.getElementById('announcement-id').value = announcement.id;
+                document.getElementById('announcement-title').value = announcement.title;
+                document.getElementById('announcement-content').value = announcement.content;
+                document.getElementById('announcement-pinned').checked = announcement.is_pinned;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading announcement for edit:', error);
+        alert('加载公告失败');
+    }
+}
+
+// 保存公告
+async function saveAnnouncement() {
+    const title = document.getElementById('announcement-title').value.trim();
+    const content = document.getElementById('announcement-content').value.trim();
+    const isPinned = document.getElementById('announcement-pinned').checked;
+    const announcementId = document.getElementById('announcement-id').value;
+    
+    if (!title || !content) {
+        alert('标题和内容不能为空');
+        return;
+    }
+    
+    try {
+        const url = announcementId ? 
+            `/api/announcements/${announcementId}` : 
+            '/api/announcements';
+        const method = announcementId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                title: title,
+                content: content,
+                is_pinned: isPinned
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: '请求失败' }));
+            throw new Error(errorData.detail || `HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('公告保存成功');
+            bootstrap.Modal.getInstance(document.getElementById('announcementModal')).hide();
+            loadAnnouncementsManagement();
+            loadAnnouncements(); // 刷新首页公告
+        } else {
+            alert('保存失败: ' + (result.message || result.detail || '未知错误'));
+        }
+    } catch (error) {
+        console.error('保存公告错误:', error);
+        alert('保存失败: ' + (error.message || '未知错误'));
+    }
+}
+
+// 编辑公告
+function editAnnouncement(announcementId) {
+    showAnnouncementModal(announcementId);
+}
+
+// 删除公告
+async function deleteAnnouncement(announcementId) {
+    if (!confirm('确定要删除这条公告吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/announcements/${announcementId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('公告删除成功');
+            loadAnnouncementsManagement();
+            loadAnnouncements(); // 刷新首页公告
+        } else {
+            alert('删除失败: ' + (result.message || '未知错误'));
+        }
+    } catch (error) {
+        alert('删除失败: ' + error.message);
+    }
+}
+
+// 格式化日期时间
+function formatDateTime(dateStr) {
+    if (!dateStr) return '';
+    try {
+        // 格式: YYYYMMDDHHmmss
+        const year = dateStr.substring(0, 4);
+        const month = dateStr.substring(4, 6);
+        const day = dateStr.substring(6, 8);
+        const hour = dateStr.substring(8, 10);
+        const minute = dateStr.substring(10, 12);
+        return `${year}-${month}-${day} ${hour}:${minute}`;
+    } catch (e) {
+        return dateStr;
     }
 }
 

@@ -26,15 +26,7 @@ app = FastAPI(title="StockInsight - 股票洞察分析系统")
 db = Database()
 config = Config()
 statistics = Statistics(db)
-
-# 初始化DataUpdater时捕获可能的错误
-try:
-    updater = DataUpdater(db, config)
-except Exception as e:
-    print(f"警告: DataUpdater初始化失败: {e}")
-    print("系统将继续运行，但数据更新功能可能不可用")
-    updater = None
-
+updater = DataUpdater(db, config)
 auth = AuthManager(db)
 
 # 定期清理过期会话
@@ -575,8 +567,6 @@ async def update_data(background_tasks: BackgroundTasks, data: Dict = Body(defau
                      session_id: Optional[str] = Cookie(None)):
     """更新数据（需要数据管理权限）"""
     auth.require_permission(session_id, 'data_management')
-    if updater is None:
-        return {"success": False, "message": "数据更新功能不可用，请检查数据源配置"}
     try:
         update_type = data.get('update_type', 'incremental')
         
@@ -596,15 +586,25 @@ async def update_data(background_tasks: BackgroundTasks, data: Dict = Body(defau
         def update_task():
             try:
                 # 每次更新时重新创建DataUpdater，确保使用最新配置
+                current_data_source = config.get('data_source', 'tushare')
+                print(f"[数据更新] 当前使用的数据源: {current_data_source}")
                 current_updater = DataUpdater(db, config)
                 current_updater.set_progress_callback(progress_callback)
                 
                 if update_type == "full":
                     # 获取更新模式：overwrite（覆盖模式）或 supplement（补充模式，默认）
                     overwrite_mode = data.get('overwrite_mode', False)
+                    print(f"[数据更新] 全量更新，模式: {'覆盖模式' if overwrite_mode else '补充模式'}")
                     current_updater.update_all_data(overwrite_mode=overwrite_mode)
                 else:
+                    print(f"[数据更新] 增量更新")
                     current_updater.update_incremental()
+            except Exception as e:
+                import traceback
+                error_detail = traceback.format_exc()
+                print(f"[数据更新] 更新失败: {error_detail}")
+                update_progress['message'] = f'更新失败: {str(e)}'
+                raise
             finally:
                 update_progress['is_running'] = False
         
@@ -636,6 +636,8 @@ async def get_config(session_id: Optional[str] = Cookie(None)):
     """获取配置（仅管理员）"""
     auth.require_admin(session_id)
     try:
+        # 重新加载配置文件，确保返回最新的配置
+        config.config = config.load_config()
         return {"success": True, "data": config.config}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -647,12 +649,15 @@ async def update_config(data: Dict = Body(...), session_id: Optional[str] = Cook
     auth.require_admin(session_id)
     try:
         for key, value in data.items():
+            # 对于字符串类型的值，如果是空字符串，则跳过更新（保留原有值）
+            # 但对于 data_source，空字符串也应该更新（因为可能是用户想重置）
+            if isinstance(value, str) and value == '' and key != 'data_source':
+                continue
             config.set(key, value)
         
         # 重新初始化数据源（同时更新fetcher和data_source）
-        if updater is not None:
-            updater.fetcher = DataFetcher(config)
-            updater.data_source = config.get('data_source', 'akshare')
+        updater.fetcher = DataFetcher(config)
+        updater.data_source = config.get('data_source', 'akshare')
         
         return {"success": True, "message": "配置已更新"}
     except Exception as e:
@@ -714,6 +719,9 @@ async def get_data_status(session_id: Optional[str] = Cookie(None)):
         # 获取所有数据源的统计信息
         data_source_stats = db.get_data_source_statistics()
         
+        # 计算总数据量（所有数据源的数据量之和）
+        total_data_count = sum(source.get('data_count', 0) for source in data_source_stats)
+        
         # 获取总体最新日期（所有数据源中的最新日期）
         latest_date = db.get_latest_trade_date()
         
@@ -721,6 +729,7 @@ async def get_data_status(session_id: Optional[str] = Cookie(None)):
             "success": True,
             "data": {
                 "total_stocks": total_stocks,
+                "total_data_count": total_data_count,
                 "latest_date": latest_date,
                 "data_sources": data_source_stats
             }
@@ -1053,4 +1062,91 @@ async def export_compare_sources(data: Dict = Body(...), session_id: Optional[st
         return export_to_excel(export_data, filename, "数据源对比")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
+
+
+# ========== 公告管理API ==========
+
+@app.get("/api/announcements")
+async def get_announcements(limit: int = 10, session_id: Optional[str] = Cookie(None)):
+    """获取公告列表（公开接口，无需登录）"""
+    try:
+        announcements = db.get_announcements(limit=limit)
+        return {"success": True, "data": announcements}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/announcements/all")
+async def get_all_announcements(session_id: Optional[str] = Cookie(None)):
+    """获取所有公告（仅管理员）"""
+    auth.require_admin(session_id)
+    try:
+        announcements = db.get_all_announcements()
+        return {"success": True, "data": announcements}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/announcements")
+async def create_announcement(data: Dict = Body(...), session_id: Optional[str] = Cookie(None)):
+    """创建公告（仅管理员）"""
+    user = auth.require_admin(session_id)
+    try:
+        title = data.get('title', '').strip()
+        content = data.get('content', '').strip()
+        is_pinned = 1 if data.get('is_pinned', False) else 0
+        
+        if not title or not content:
+            raise HTTPException(status_code=400, detail="标题和内容不能为空")
+        
+        announcement_id = db.create_announcement(title, content, user['id'], is_pinned)
+        return {"success": True, "message": "公告创建成功", "id": announcement_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/announcements/{announcement_id}")
+async def update_announcement(announcement_id: int, data: Dict = Body(...), 
+                             session_id: Optional[str] = Cookie(None)):
+    """更新公告（仅管理员）"""
+    auth.require_admin(session_id)
+    try:
+        title = data.get('title', '').strip()
+        content = data.get('content', '').strip()
+        is_pinned = 1 if data.get('is_pinned', False) else 0
+        
+        if not title or not content:
+            raise HTTPException(status_code=400, detail="标题和内容不能为空")
+        
+        # 检查公告是否存在
+        announcement = db.get_announcement_by_id(announcement_id)
+        if not announcement:
+            raise HTTPException(status_code=404, detail="公告不存在")
+        
+        db.update_announcement(announcement_id, title, content, is_pinned)
+        return {"success": True, "message": "公告更新成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/announcements/{announcement_id}")
+async def delete_announcement(announcement_id: int, session_id: Optional[str] = Cookie(None)):
+    """删除公告（仅管理员）"""
+    auth.require_admin(session_id)
+    try:
+        # 检查公告是否存在
+        announcement = db.get_announcement_by_id(announcement_id)
+        if not announcement:
+            raise HTTPException(status_code=404, detail="公告不存在")
+        
+        db.delete_announcement(announcement_id)
+        return {"success": True, "message": "公告删除成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

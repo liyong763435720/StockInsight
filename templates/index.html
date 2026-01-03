@@ -93,7 +93,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="showTab('data-management', this); return false;">数据管理</a>
+                        <a class="nav-link active" href="#" onclick="showTab('home', this); return false;">首页</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" onclick="showTab('stock-analysis', this); return false;">单只股票分析</a>
@@ -117,11 +117,6 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <span class="navbar-text me-3" id="current-user-info" style="display: none;"></span>
-                        <a class="nav-link" href="#" onclick="showTab('account-settings', this); return false;" id="account-settings-link" style="display: none;">
-                            <i class="bi bi-person-gear"></i> 账户设置
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <button class="btn btn-outline-light btn-sm" id="logout-btn" onclick="logout()" style="display: none;">登出</button>
                     </li>
                 </ul>
@@ -153,74 +148,68 @@
                 </div>
             </div>
         </div>
-        
-        <!-- 合规声明 -->
-        <div class="container mt-4" style="max-width: 900px;">
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="bi bi-shield-check"></i> StockInsight 股票洞察分析系统 - 合规声明</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>使用本系统前，请仔细阅读以下合规声明：</strong></p>
-                    <ol class="small">
-                        <li><strong>数据来源与准确性</strong>：本系统使用的股票数据来源于公开数据源（如akshare、Tushare等），数据仅供参考，不构成投资建议。用户应自行验证数据的准确性。</li>
-                        <li><strong>投资风险提示</strong>：股票投资存在风险，过往表现不代表未来收益。本系统提供的统计分析结果仅供参考，不应作为投资决策的唯一依据。</li>
-                        <li><strong>用户责任</strong>：用户应妥善保管账户信息，不得将账户信息泄露给第三方。用户对其账户下的所有操作负责。</li>
-                        <li><strong>数据使用</strong>：用户应遵守相关法律法规，不得将本系统数据用于非法用途。禁止利用系统进行数据爬取、批量下载等可能影响系统稳定性的操作。</li>
-                        <li><strong>系统可用性</strong>：系统可能因维护、升级等原因暂停服务，不保证100%可用性。用户应做好数据备份。</li>
-                        <li><strong>隐私保护</strong>：系统仅收集必要的用户信息用于身份验证和权限管理，不会向第三方泄露用户信息。</li>
-                        <li><strong>免责声明</strong>：系统运营方不对因使用本系统而产生的任何直接或间接损失承担责任。</li>
-                    </ol>
-                    <p class="text-muted mb-0"><small>最后更新时间：<span id="current-year"></span>年</small></p>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- 主内容区域（登录后显示） -->
     <div id="main-content" class="container-fluid mt-4" style="display: none;">
-        <!-- 数据管理 -->
-        <div id="data-management" class="tab-content" style="display: none;">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="bi bi-database"></i> 数据管理</h5>
+        <!-- 首页 -->
+        <div id="home" class="tab-content" style="display: block;">
+            <div class="row">
+                <!-- 公告栏 -->
+                <div class="col-md-8 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="bi bi-megaphone"></i> 系统公告</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="announcements-list">
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-hourglass-split"></i> 加载中...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6>数据状态</h6>
-                                    <p id="data-status">加载中...</p>
-                                </div>
+                
+                <!-- 快速入口 -->
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> 快速入口</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2" id="quick-access-buttons">
+                                <a href="#" class="btn btn-outline-primary quick-access-btn" data-tab="stock-analysis" data-permissions="stock_analysis_single,stock_analysis_multi" onclick="showTab('stock-analysis', event.target); return false;" style="display: none;">
+                                    <i class="bi bi-graph-up"></i> 单只股票分析
+                                </a>
+                                <a href="#" class="btn btn-outline-success quick-access-btn" data-tab="month-filter" data-permissions="month_filter" onclick="showTab('month-filter', event.target); return false;" style="display: none;">
+                                    <i class="bi bi-calendar-month"></i> 月份筛选统计
+                                </a>
+                                <a href="#" class="btn btn-outline-warning quick-access-btn" data-tab="industry-analysis" data-permissions="industry_statistics,industry_top_stocks" onclick="showTab('industry-analysis', event.target); return false;" style="display: none;">
+                                    <i class="bi bi-building"></i> 行业分析
+                                </a>
+                                <a href="#" class="btn btn-outline-info quick-access-btn" data-tab="source-compare" data-permissions="source_compare" onclick="showTab('source-compare', event.target); return false;" style="display: none;">
+                                    <i class="bi bi-arrow-left-right"></i> 数据源对比
+                                </a>
+                            </div>
+                            <div id="no-quick-access" class="text-center text-muted py-3" style="display: none;">
+                                <i class="bi bi-info-circle"></i> 您暂无可用功能权限
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">全量更新模式：</label>
-                                <div class="btn-group" role="group">
-                                    <input type="radio" class="btn-check" name="fullUpdateMode" id="fullUpdateModeSupplement" value="supplement" checked>
-                                    <label class="btn btn-outline-primary" for="fullUpdateModeSupplement">补充模式</label>
-                                    
-                                    <input type="radio" class="btn-check" name="fullUpdateMode" id="fullUpdateModeOverwrite" value="overwrite">
-                                    <label class="btn btn-outline-danger" for="fullUpdateModeOverwrite">覆盖模式</label>
-                                </div>
-                                <small class="form-text text-muted d-block mt-2">
-                                    <strong>补充模式：</strong>只添加缺失的数据，不会覆盖已有数据（推荐）<br>
-                                    <strong>覆盖模式：</strong>先删除当前数据源的所有数据，然后重新获取（确保数据最新）
-                                </small>
-                            </div>
+                    
+                    <!-- 系统信息 -->
+                    <div class="card mt-3">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0"><i class="bi bi-info-circle"></i> 系统信息</h5>
                         </div>
-                        <button class="btn btn-primary" onclick="updateData('full')">全量更新数据</button>
-                        <button class="btn btn-success" onclick="updateData('incremental')">增量更新数据</button>
-                    </div>
-                    <div class="progress-container" id="update-progress-container">
-                        <div class="progress mb-2">
-                            <div class="progress-bar" role="progressbar" id="update-progress-bar" style="width: 0%"></div>
+                        <div class="card-body">
+                            <p class="mb-2"><strong>欢迎使用股票洞察分析系统</strong></p>
+                            <p class="text-muted small mb-0">
+                                本系统提供股票数据分析、行业统计、数据源对比等功能。
+                                如有问题，请联系管理员。
+                            </p>
                         </div>
-                        <p id="update-progress-message"></p>
                     </div>
                 </div>
             </div>
@@ -532,7 +521,9 @@
                     <h5><i class="bi bi-gear"></i> 系统配置</h5>
                 </div>
                 <div class="card-body">
-                    <form id="config-form">
+                    <!-- 数据源配置 -->
+                    <h6 class="mb-3"><i class="bi bi-sliders"></i> 数据源配置</h6>
+                    <form id="config-form" class="mb-4">
                         <div class="mb-3">
                             <label class="form-label">数据源</label>
                             <select class="form-select" id="config-data-source">
@@ -553,53 +544,98 @@
                         <button type="button" class="btn btn-primary" onclick="saveConfig()">保存配置</button>
                         <button type="button" class="btn btn-secondary" onclick="loadConfig()">重新加载</button>
                     </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- 账户设置（所有用户） -->
-        <div id="account-settings" class="tab-content" style="display: none;">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="bi bi-person-gear"></i> 账户设置</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h6>修改密码</h6>
-                            <div class="mb-3">
-                                <label class="form-label">当前密码</label>
-                                <input type="password" class="form-control" id="account-old-password" placeholder="请输入当前密码">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">新密码</label>
-                                <input type="password" class="form-control" id="account-new-password" placeholder="请输入新密码（至少8位，包含字母和数字）">
-                                <small class="form-text text-muted">
-                                    <div id="password-strength" class="mt-2"></div>
-                                </small>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">确认新密码</label>
-                                <input type="password" class="form-control" id="account-confirm-password" placeholder="请再次输入新密码">
-                                <small class="form-text text-danger" id="password-match-error" style="display: none;">两次输入的密码不一致</small>
-                            </div>
-                            <button type="button" class="btn btn-primary" onclick="changeAccountPassword()">
-                                <i class="bi bi-key"></i> 修改密码
-                            </button>
-                        </div>
-                        <div class="col-md-4">
+                    
+                    <hr class="my-4">
+                    
+                    <!-- 数据管理 -->
+                    <h6 class="mb-3"><i class="bi bi-database"></i> 数据管理</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
                             <div class="card bg-light">
                                 <div class="card-body">
-                                    <h6><i class="bi bi-info-circle"></i> 密码安全提示</h6>
-                                    <ul class="small">
-                                        <li>密码长度至少8位</li>
-                                        <li>建议包含大小写字母、数字和特殊字符</li>
-                                        <li>不要使用与用户名相同的密码</li>
-                                        <li>定期更换密码以提高安全性</li>
-                                    </ul>
+                                    <h6>数据状态</h6>
+                                    <p id="data-status">加载中...</p>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">全量更新模式：</label>
+                                <div class="btn-group" role="group">
+                                    <input type="radio" class="btn-check" name="fullUpdateMode" id="fullUpdateModeSupplement" value="supplement" checked>
+                                    <label class="btn btn-outline-primary" for="fullUpdateModeSupplement">补充模式</label>
+                                    
+                                    <input type="radio" class="btn-check" name="fullUpdateMode" id="fullUpdateModeOverwrite" value="overwrite">
+                                    <label class="btn btn-outline-danger" for="fullUpdateModeOverwrite">覆盖模式</label>
+                                </div>
+                                <small class="form-text text-muted d-block mt-2">
+                                    <strong>补充模式：</strong>只添加缺失的数据，不会覆盖已有数据（推荐）<br>
+                                    <strong>覆盖模式：</strong>先删除当前数据源的所有数据，然后重新获取（确保数据最新）
+                                </small>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="updateData('full')">全量更新数据</button>
+                        <button class="btn btn-success" onclick="updateData('incremental')">增量更新数据</button>
+                    </div>
+                    <div class="progress-container" id="update-progress-container">
+                        <div class="progress mb-2">
+                            <div class="progress-bar" role="progressbar" id="update-progress-bar" style="width: 0%"></div>
+                        </div>
+                        <p id="update-progress-message"></p>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <!-- 公告管理 -->
+                    <h6 class="mb-3"><i class="bi bi-megaphone"></i> 公告管理</h6>
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-primary" onclick="showAnnouncementModal()">
+                            <i class="bi bi-plus-circle"></i> 发布公告
+                        </button>
+                    </div>
+                    <div id="announcements-management-list">
+                        <div class="text-center text-muted py-3">
+                            <i class="bi bi-hourglass-split"></i> 加载中...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 公告编辑模态框 -->
+        <div class="modal fade" id="announcementModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="announcementModalTitle">发布公告</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="announcementForm">
+                            <input type="hidden" id="announcement-id">
+                            <div class="mb-3">
+                                <label class="form-label">标题 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="announcement-title" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">内容 <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="announcement-content" rows="6" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="announcement-pinned">
+                                    <label class="form-check-label" for="announcement-pinned">
+                                        置顶显示
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" onclick="saveAnnouncement()">保存</button>
                     </div>
                 </div>
             </div>

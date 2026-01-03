@@ -16,18 +16,14 @@ python3 --version
 
 # 检查依赖是否安装
 echo "[信息] 检查依赖包..."
-python3 -c "import fastapi, uvicorn, pandas, akshare" 2>/dev/null
+python3 -c "import fastapi" 2>/dev/null
 if [ $? -ne 0 ]; then
     echo "[信息] 正在安装依赖包..."
-    # 使用 --root-user-action=ignore 忽略root用户警告
-    pip3 install --root-user-action=ignore -r requirements.txt
+    pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
         echo "[错误] 依赖包安装失败"
         exit 1
     fi
-    echo "[信息] 依赖包安装完成"
-else
-    echo "[信息] 依赖包已安装"
 fi
 
 echo "[信息] 启动服务..."

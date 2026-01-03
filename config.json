@@ -1,0 +1,12 @@
+{
+  "data_source": "baostock",
+  "tushare": {
+    "token": "56a96c4550edebe05ca1278a9965e425f55a6510435898b1531f8aef"
+  },
+  "baostock": {},
+  "finnhub": {
+    "api_key": "d2maff9r01qq6fopo9bgd2maff9r01qq6fopo9c0"
+  },
+  "akshare": {},
+  "update_frequency": "monthly"
+}

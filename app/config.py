@@ -27,15 +27,8 @@ class Config:
     
     def get_default_config(self) -> Dict:
         """默认配置"""
-        # 检查akshare是否可用，如果不可用则默认使用tushare
-        try:
-            import akshare as ak
-            default_source = "akshare"
-        except ImportError:
-            default_source = "tushare"
-        
         return {
-            "data_source": default_source,
+            "data_source": "akshare",
             "tushare": {
                 "token": ""
             },

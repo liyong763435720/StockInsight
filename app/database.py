@@ -127,6 +127,20 @@ class Database:
                 VALUES (?, ?, ?)
             """, ('session_duration_hours', '24', datetime.now().strftime('%Y%m%d%H%M%S')))
         
+        # 公告表
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS announcements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                is_pinned INTEGER NOT NULL DEFAULT 0,
+                created_by INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT,
+                FOREIGN KEY (created_by) REFERENCES users(id)
+            )
+        """)
+        
         # 提交所有更改
         conn.commit()
         
@@ -829,4 +843,130 @@ class Database:
         results = cursor.fetchall()
         conn.close()
         return [r[0] for r in results]
+    
+    # ========== 公告管理方法 ==========
+    
+    def create_announcement(self, title: str, content: str, created_by: int, is_pinned: int = 0) -> int:
+        """创建公告"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        current_time = datetime.now().strftime('%Y%m%d%H%M%S')
+        cursor.execute("""
+            INSERT INTO announcements (title, content, is_pinned, created_by, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (title, content, is_pinned, created_by, current_time, current_time))
+        announcement_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return announcement_id
+    
+    def get_announcements(self, limit: int = 10, include_pinned: bool = True) -> List[Dict]:
+        """获取公告列表（按置顶和时间排序）"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        if include_pinned:
+            cursor.execute("""
+                SELECT a.id, a.title, a.content, a.is_pinned, a.created_at, a.updated_at,
+                       u.username as created_by_name
+                FROM announcements a
+                LEFT JOIN users u ON a.created_by = u.id
+                ORDER BY a.is_pinned DESC, a.created_at DESC
+                LIMIT ?
+            """, (limit,))
+        else:
+            cursor.execute("""
+                SELECT a.id, a.title, a.content, a.is_pinned, a.created_at, a.updated_at,
+                       u.username as created_by_name
+                FROM announcements a
+                LEFT JOIN users u ON a.created_by = u.id
+                WHERE a.is_pinned = 0
+                ORDER BY a.created_at DESC
+                LIMIT ?
+            """, (limit,))
+        rows = cursor.fetchall()
+        conn.close()
+        announcements = []
+        for row in rows:
+            announcements.append({
+                'id': row[0],
+                'title': row[1],
+                'content': row[2],
+                'is_pinned': bool(row[3]),
+                'created_at': row[4],
+                'updated_at': row[5],
+                'created_by_name': row[6] or '系统'
+            })
+        return announcements
+    
+    def get_all_announcements(self) -> List[Dict]:
+        """获取所有公告（用于管理）"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.id, a.title, a.content, a.is_pinned, a.created_at, a.updated_at,
+                   u.username as created_by_name
+            FROM announcements a
+            LEFT JOIN users u ON a.created_by = u.id
+            ORDER BY a.is_pinned DESC, a.created_at DESC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        announcements = []
+        for row in rows:
+            announcements.append({
+                'id': row[0],
+                'title': row[1],
+                'content': row[2],
+                'is_pinned': bool(row[3]),
+                'created_at': row[4],
+                'updated_at': row[5],
+                'created_by_name': row[6] or '系统'
+            })
+        return announcements
+    
+    def update_announcement(self, announcement_id: int, title: str, content: str, is_pinned: int = 0):
+        """更新公告"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        current_time = datetime.now().strftime('%Y%m%d%H%M%S')
+        cursor.execute("""
+            UPDATE announcements
+            SET title = ?, content = ?, is_pinned = ?, updated_at = ?
+            WHERE id = ?
+        """, (title, content, is_pinned, current_time, announcement_id))
+        conn.commit()
+        conn.close()
+    
+    def delete_announcement(self, announcement_id: int):
+        """删除公告"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM announcements WHERE id = ?", (announcement_id,))
+        conn.commit()
+        conn.close()
+    
+    def get_announcement_by_id(self, announcement_id: int) -> Optional[Dict]:
+        """根据ID获取公告"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.id, a.title, a.content, a.is_pinned, a.created_at, a.updated_at,
+                   u.username as created_by_name
+            FROM announcements a
+            LEFT JOIN users u ON a.created_by = u.id
+            WHERE a.id = ?
+        """, (announcement_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return {
+                'id': row[0],
+                'title': row[1],
+                'content': row[2],
+                'is_pinned': bool(row[3]),
+                'created_at': row[4],
+                'updated_at': row[5],
+                'created_by_name': row[6] or '系统'
+            }
+        return None
 

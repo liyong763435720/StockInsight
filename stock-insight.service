@@ -1,9 +1,12 @@
 [Unit]
 Description=StockInsight - 股票洞察分析系统
 After=network.target
+Wants=network-online.target
 
 [Service]
 Type=simple
+# 注意：User和WorkingDirectory需要根据实际部署路径修改
+# 运行 install.sh 脚本会自动配置这些参数
 User=www-data
 WorkingDirectory=/opt/stock-insight
 ExecStart=/usr/bin/python3 /opt/stock-insight/start_prod.py
@@ -12,9 +15,17 @@ RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# 环境变量（可选）
+# 环境变量
 Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONPATH=/opt/stock-insight"
+
+# 资源限制（可选，根据需要调整）
+# LimitNOFILE=65536
+# MemoryMax=2G
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
-
