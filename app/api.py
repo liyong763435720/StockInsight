@@ -275,7 +275,12 @@ async def get_system_config(session_id: Optional[str] = Cookie(None)):
     auth.require_admin(session_id)
     try:
         session_duration = db.get_system_config('session_duration_hours', '24')
-        return {"success": True, "data": {"session_duration_hours": int(session_duration)}}
+        # 安全地转换为整数，如果转换失败则使用默认值
+        try:
+            session_duration_int = int(session_duration) if session_duration else 24
+        except (ValueError, TypeError):
+            session_duration_int = 24
+        return {"success": True, "data": {"session_duration_hours": session_duration_int}}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

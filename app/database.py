@@ -814,6 +814,11 @@ class Database:
     def save_industry(self, ts_code: str, industry_name: str, level: str, 
                      parent_code: str, industry_type: str = 'sw'):
         """保存行业分类"""
+        # 白名单验证，防止SQL注入
+        ALLOWED_INDUSTRY_TYPES = {'sw', 'citics'}
+        if industry_type not in ALLOWED_INDUSTRY_TYPES:
+            raise ValueError(f"Invalid industry_type: {industry_type}. Must be one of {ALLOWED_INDUSTRY_TYPES}")
+        
         conn = self.get_connection()
         cursor = conn.cursor()
         table = 'industry_sw' if industry_type == 'sw' else 'industry_citics'
@@ -826,6 +831,11 @@ class Database:
     
     def get_industry_stocks(self, industry_name: str, industry_type: str = 'sw') -> List[str]:
         """获取行业下的股票代码列表"""
+        # 白名单验证，防止SQL注入
+        ALLOWED_INDUSTRY_TYPES = {'sw', 'citics'}
+        if industry_type not in ALLOWED_INDUSTRY_TYPES:
+            raise ValueError(f"Invalid industry_type: {industry_type}. Must be one of {ALLOWED_INDUSTRY_TYPES}")
+        
         conn = self.get_connection()
         table = 'industry_sw' if industry_type == 'sw' else 'industry_citics'
         cursor = conn.cursor()
@@ -836,6 +846,11 @@ class Database:
     
     def get_all_industries(self, industry_type: str = 'sw') -> List[str]:
         """获取所有行业名称"""
+        # 白名单验证，防止SQL注入
+        ALLOWED_INDUSTRY_TYPES = {'sw', 'citics'}
+        if industry_type not in ALLOWED_INDUSTRY_TYPES:
+            raise ValueError(f"Invalid industry_type: {industry_type}. Must be one of {ALLOWED_INDUSTRY_TYPES}")
+        
         conn = self.get_connection()
         table = 'industry_sw' if industry_type == 'sw' else 'industry_citics'
         cursor = conn.cursor()

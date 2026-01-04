@@ -60,9 +60,14 @@ class DataFetcher:
         return df
     
     def _get_stock_list_baostock(self) -> pd.DataFrame:
-        """从BaoStock获取股票列表"""
-        # BaoStock没有提供股票列表接口，需要从数据库或其他数据源获取
-        # 优先从数据库获取已有的股票列表
+        """从BaoStock获取股票列表
+        
+        注意：BaoStock本身不提供股票列表接口，只能从数据库获取已有的股票列表。
+        如果数据库为空，将返回空DataFrame。用户需要手动切换到其他数据源（如akshare或tushare）
+        先获取股票列表，然后再切换回BaoStock获取K线数据。
+        """
+        # BaoStock没有提供股票列表接口，只能从数据库获取已有的股票列表
+        # 不允许自动切换到其他数据源，必须由用户手动选择
         try:
             from app.database import Database
             db = Database()
@@ -72,19 +77,10 @@ class DataFetcher:
         except Exception as e:
             print(f"从数据库获取股票列表失败: {e}")
         
-        # 如果数据库没有股票列表，尝试从tushare获取（如果配置了token）
-        try:
-            token = self.config.get('tushare.token', '')
-            if token:
-                ts.set_token(token)
-                pro = ts.pro_api()
-                df = pro.stock_basic(exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,list_date,delist_date,is_hs,exchange')
-                return df
-        except Exception as e:
-            print(f"从tushare获取股票列表失败: {e}")
-        
-        # 如果都失败，返回空DataFrame
-        print("警告: 无法获取股票列表，baostock数据源需要先有其他数据源的股票列表")
+        # 如果数据库没有股票列表，返回空DataFrame
+        # 不自动切换到其他数据源，必须由用户手动选择数据源
+        print("警告: BaoStock数据源无法获取股票列表（BaoStock本身不提供此接口）。")
+        print("      请先使用其他数据源（如akshare或tushare）获取股票列表，然后再切换回BaoStock获取K线数据。")
         return pd.DataFrame()
     
     def _get_stock_list_finnhub(self) -> pd.DataFrame:
@@ -728,8 +724,9 @@ class DataFetcher:
                 if stock and stock.get('list_date'):
                     list_date = stock['list_date']
                 else:
-                    # 如果数据库没有上市日期，尝试从tushare获取（如果配置了token）
-                    if self.data_source == 'tushare' or self.config.get('tushare.token'):
+                    # 如果数据库没有上市日期，且当前数据源是tushare，尝试从tushare获取
+                    # 注意：只有当数据源是tushare时才从tushare获取，保证数据源独立性
+                    if self.data_source == 'tushare':
                         try:
                             import tushare as ts
                             token = self.config.get('tushare.token', '')
@@ -744,15 +741,17 @@ class DataFetcher:
                                         try:
                                             if stock:
                                                 conn = db.get_connection()
-                                                cursor = conn.cursor()
-                                                cursor.execute("UPDATE stocks SET list_date = ? WHERE symbol = ? OR ts_code = ?", 
-                                                             (list_date, code, ts_code))
-                                                conn.commit()
-                                                conn.close()
-                                        except:
-                                            pass
-                        except:
-                            pass
+                                                try:
+                                                    cursor = conn.cursor()
+                                                    cursor.execute("UPDATE stocks SET list_date = ? WHERE symbol = ? OR ts_code = ?", 
+                                                                 (list_date, code, ts_code))
+                                                    conn.commit()
+                                                finally:
+                                                    conn.close()
+                                        except Exception as e:
+                                            print(f"Error updating list_date in DB for {ts_code}: {e}")
+                        except Exception as e:
+                            print(f"Error fetching list_date from tushare for {ts_code}: {e}")
             except:
                 pass  # 如果获取失败，继续使用None
         

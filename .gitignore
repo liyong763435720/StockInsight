@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 配置文件（包含敏感信息）
+config.json
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+stock_data.db
+
+# 日志文件
+*.log
+logs/
+app.log
+
+# 测试和临时文件
+test_*.py
+check_*.py
+verify_*.py
+compare_*.py
+enhance_*.py
+*.py.bak
+
+# 文档（可选，如果不想上传测试报告）
+*_COMPARISON_REPORT.md
+*_VERIFICATION.md
+*_SUMMARY.md
+*_ANALYSIS.md
+*_PLAN.md
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 部署相关（可选）
+*.service
+docker-compose.override.yml
+
+# 环境变量
+.env
+.env.local
+
+# 备份文件
+*.bak
+*.backup
+*~
+
