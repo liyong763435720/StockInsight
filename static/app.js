@@ -15,16 +15,21 @@ document.addEventListener('DOMContentLoaded', function() {
 // 显示标签页
 function showTab(tabName, eventElement) {
     // 隐藏所有标签页
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.style.display = 'none';
-    });
+    var allTabs = document.querySelectorAll('.tab-content');
+    for (var i = 0; i < allTabs.length; i++) {
+        allTabs[i].style.display = 'none';
+    }
     // 显示选中的标签页
-    document.getElementById(tabName).style.display = 'block';
+    var targetTab = document.getElementById(tabName);
+    if (targetTab) {
+        targetTab.style.display = 'block';
+    }
     
     // 更新导航栏活动状态
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('active');
-    });
+    var allLinks = document.querySelectorAll('.nav-link');
+    for (var i = 0; i < allLinks.length; i++) {
+        allLinks[i].classList.remove('active');
+    }
     // 如果传入了事件元素，则激活它
     if (eventElement) {
         eventElement.classList.add('active');
@@ -51,6 +56,23 @@ function showTab(tabName, eventElement) {
             // 加载公告管理列表
             loadAnnouncementsManagement();
         }
+    }
+    
+    // 如果切换到股票分析标签页，重新初始化自动完成功能
+    if (tabName === 'stock-analysis') {
+        // 延迟初始化，确保DOM已完全渲染
+        setTimeout(function() {
+            initStockAutocomplete();
+            initStockAnalysisTypeToggle();
+        }, 100);
+    }
+    
+    // 如果切换到数据源对比标签页，重新初始化自动完成功能
+    if (tabName === 'source-compare') {
+        // 延迟初始化，确保DOM已完全渲染
+        setTimeout(function() {
+            initStockAutocomplete();
+        }, 100);
     }
 }
 
@@ -953,180 +975,260 @@ async function loadDataSources() {
 
 // 初始化单只股票分析类型切换
 function initStockAnalysisTypeToggle() {
-    const singleMonthRadio = document.getElementById('stock-single-month');
-    const multiMonthRadio = document.getElementById('stock-multi-month');
-    const singleMonthForm = document.getElementById('stock-single-month-form');
-    const multiMonthForm = document.getElementById('stock-multi-month-form');
+    var singleMonthRadio = document.getElementById('stock-single-month');
+    var multiMonthRadio = document.getElementById('stock-multi-month');
+    var singleMonthForm = document.getElementById('stock-single-month-form');
+    var multiMonthForm = document.getElementById('stock-multi-month-form');
     
     if (singleMonthRadio && multiMonthRadio) {
         singleMonthRadio.addEventListener('change', function() {
             if (this.checked) {
-                singleMonthForm.style.display = 'block';
-                multiMonthForm.style.display = 'none';
+                if (singleMonthForm) singleMonthForm.style.display = 'block';
+                if (multiMonthForm) multiMonthForm.style.display = 'none';
+                // 重新初始化自动完成（确保事件监听器正确绑定）
+                initStockAutocomplete();
             }
         });
         
         multiMonthRadio.addEventListener('change', function() {
             if (this.checked) {
-                singleMonthForm.style.display = 'none';
-                multiMonthForm.style.display = 'block';
+                if (singleMonthForm) singleMonthForm.style.display = 'none';
+                if (multiMonthForm) multiMonthForm.style.display = 'block';
+                // 重新初始化自动完成（确保事件监听器正确绑定）
+                initStockAutocomplete();
             }
         });
     }
 }
 
 // 按月统计查询
-async function analyzeStockMultiMonth() {
-    const code = document.getElementById('stock-multi-code').value.trim();
-    const startYear = parseInt(document.getElementById('stock-multi-start-year').value);
-    const endYear = parseInt(document.getElementById('stock-multi-end-year').value);
-    const dataSource = document.getElementById('stock-multi-data-source').value;
+// 全选月份
+function selectAllMonths() {
+    var monthContainer = document.getElementById('stock-multi-months');
+    if (!monthContainer) return;
     
-    // 获取选中的月份
-    const monthSelect = document.getElementById('stock-multi-months');
-    const selectedMonths = Array.from(monthSelect.selectedOptions).map(opt => parseInt(opt.value));
+    var monthCheckboxes = monthContainer.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < monthCheckboxes.length; i++) {
+        monthCheckboxes[i].checked = true;
+    }
+}
+
+// 清空月份选择
+function clearAllMonths() {
+    var monthContainer = document.getElementById('stock-multi-months');
+    if (!monthContainer) return;
+    
+    var monthCheckboxes = monthContainer.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < monthCheckboxes.length; i++) {
+        monthCheckboxes[i].checked = false;
+    }
+}
+
+function analyzeStockMultiMonth() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:979',message:'analyzeStockMultiMonth called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(function(){}); 
+    // #endregion
+    var code = document.getElementById('stock-multi-code').value.trim();
+    var startYear = parseInt(document.getElementById('stock-multi-start-year').value);
+    var endYear = parseInt(document.getElementById('stock-multi-end-year').value);
+    var dataSource = document.getElementById('stock-multi-data-source').value;
+    
+    // 获取选中的月份（从checkbox获取，兼容所有浏览器）
+    var monthContainer = document.getElementById('stock-multi-months');
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:987',message:'Month container check',data:{monthContainerExists:!!monthContainer,containerTagName:monthContainer?monthContainer.tagName:'N/A'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(function(){}); 
+    // #endregion
+    var monthCheckboxes = monthContainer ? monthContainer.querySelectorAll('input[type="checkbox"]') : [];
+    var selectedMonths = [];
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:990',message:'Checkboxes found',data:{checkboxCount:monthCheckboxes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(function(){}); 
+    // #endregion
+    
+    // 使用兼容所有浏览器的方式遍历
+    for (var i = 0; i < monthCheckboxes.length; i++) {
+        if (monthCheckboxes[i].checked) {
+            var monthValue = parseInt(monthCheckboxes[i].value);
+            if (!isNaN(monthValue)) {
+                selectedMonths.push(monthValue);
+            }
+        }
+    }
+    
     // 如果没有选择任何月份，则查询所有月份
-    const months = selectedMonths.length > 0 ? selectedMonths : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    var months = selectedMonths.length > 0 ? selectedMonths : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     
     if (!code) {
         alert('请输入股票代码');
         return;
     }
     
-    const resultDiv = document.getElementById('stock-result');
+    var resultDiv = document.getElementById('stock-result');
     resultDiv.innerHTML = '<div class="loading">查询中...</div>';
     
-    try {
-        const requestBody = {
-            code: code,
-            months: months,
-            start_year: startYear,
-            end_year: endYear
-        };
-        if (dataSource) {
-            requestBody.data_source = dataSource;
+    var requestBody = {
+        code: code,
+        months: months,
+        start_year: startYear,
+        end_year: endYear
+    };
+    if (dataSource) {
+        requestBody.data_source = dataSource;
+    }
+    
+    // 使用兼容所有浏览器的fetch
+    fetch('/api/stock/multi-month-statistics', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
         }
-        
-        const response = await fetch('/api/stock/multi-month-statistics', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        const result = await response.json();
+        return response.json();
+    })
+    .then(function(result) {
         if (result.success) {
             displayStockMultiMonthResult(result.data);
         } else {
             resultDiv.innerHTML = '<div class="alert alert-danger">查询失败: ' + (result.message || '未知错误') + '</div>';
         }
-    } catch (error) {
+    })
+    .catch(function(error) {
         resultDiv.innerHTML = '<div class="alert alert-danger">查询失败: ' + error.message + '</div>';
-    }
+    });
 }
 
 // 显示按月统计结果
 function displayStockMultiMonthResult(data) {
-    const resultDiv = document.getElementById('stock-result');
+    var resultDiv = document.getElementById('stock-result');
     
     if (!data || data.length === 0) {
         resultDiv.innerHTML = '<div class="alert alert-warning">该股票在指定月份没有数据</div>';
         return;
     }
     
-    const stockName = data[0].name || '';
-    const stockSymbol = data[0].symbol || '';
-    const dataSource = data[0].data_source || '';
-    const dataSourceBadge = dataSource ? `<span class="badge bg-secondary ms-2">数据源: ${dataSource}</span>` : '';
+    var stockName = data[0].name || '';
+    var stockSymbol = data[0].symbol || '';
+    var dataSource = data[0].data_source || '';
+    var dataSourceBadge = dataSource ? '<span class="badge bg-secondary ms-2">数据源: ' + escapeHtml(dataSource) + '</span>' : '';
     
-    let html = `<h6>${stockName} (${stockSymbol}) - 按月统计 ${dataSourceBadge}</h6>`;
+    var html = '<h6>' + escapeHtml(stockName) + ' (' + escapeHtml(stockSymbol) + ') - 按月统计 ' + dataSourceBadge + '</h6>';
     html += '<div class="table-responsive"><table class="table table-striped table-hover">';
     html += '<thead><tr><th>月份</th><th>总次数</th><th>上涨次数</th><th>下跌次数</th><th>上涨概率</th><th>下跌概率</th><th>平均涨幅</th><th>平均跌幅</th></tr></thead><tbody>';
     
-    data.forEach(item => {
-        const upProbClass = item.up_probability >= 50 ? 'bg-success' : 'bg-warning';
-        const downProbClass = item.down_probability >= 50 ? 'bg-danger' : 'bg-secondary';
+    // 使用兼容所有浏览器的方式遍历
+    for (var i = 0; i < data.length; i++) {
+        var item = data[i];
+        var upProbClass = item.up_probability >= 50 ? 'bg-success' : 'bg-warning';
+        var downProbClass = item.down_probability >= 50 ? 'bg-danger' : 'bg-secondary';
         
-        html += `<tr>
-            <td><strong>${item.month}月</strong></td>
-            <td>${item.total_count}</td>
-            <td class="text-success">${item.up_count}</td>
-            <td class="text-danger">${item.down_count}</td>
-            <td><span class="badge ${upProbClass}">${item.up_probability}%</span></td>
-            <td><span class="badge ${downProbClass}">${item.down_probability}%</span></td>
-            <td class="text-success">${item.avg_up_pct}%</td>
-            <td class="text-danger">${item.avg_down_pct}%</td>
-        </tr>`;
-    });
+        html += '<tr>';
+        html += '<td><strong>' + item.month + '月</strong></td>';
+        html += '<td>' + item.total_count + '</td>';
+        html += '<td class="text-success">' + item.up_count + '</td>';
+        html += '<td class="text-danger">' + item.down_count + '</td>';
+        html += '<td><span class="badge ' + upProbClass + '">' + item.up_probability + '%</span></td>';
+        html += '<td><span class="badge ' + downProbClass + '">' + item.down_probability + '%</span></td>';
+        html += '<td class="text-success">' + item.avg_up_pct + '%</td>';
+        html += '<td class="text-danger">' + item.avg_down_pct + '%</td>';
+        html += '</tr>';
+    }
     
     html += '</tbody></table></div>';
     
     // 添加导出按钮
-    html += `
-        <div class="mt-3">
-            <button class="btn btn-success" onclick="exportMultiMonthStatistics()">
-                <i class="bi bi-file-earmark-excel"></i> 导出Excel
-            </button>
-        </div>
-    `;
+    html += '<div class="mt-3">';
+    html += '<button class="btn btn-success" onclick="exportMultiMonthStatistics()">';
+    html += '<i class="bi bi-file-earmark-excel"></i> 导出Excel';
+    html += '</button>';
+    html += '</div>';
     
     resultDiv.innerHTML = html;
 }
 
 // 导出按月统计
-async function exportMultiMonthStatistics() {
-    const code = document.getElementById('stock-multi-code').value.trim();
-    const startYear = parseInt(document.getElementById('stock-multi-start-year').value);
-    const endYear = parseInt(document.getElementById('stock-multi-end-year').value);
-    const dataSource = document.getElementById('stock-multi-data-source').value;
+function exportMultiMonthStatistics() {
+    var code = document.getElementById('stock-multi-code').value.trim();
+    var startYear = parseInt(document.getElementById('stock-multi-start-year').value);
+    var endYear = parseInt(document.getElementById('stock-multi-end-year').value);
+    var dataSource = document.getElementById('stock-multi-data-source').value;
     
-    // 获取选中的月份
-    const monthSelect = document.getElementById('stock-multi-months');
-    const selectedMonths = Array.from(monthSelect.selectedOptions).map(opt => parseInt(opt.value));
-    const months = selectedMonths.length > 0 ? selectedMonths : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    // 获取选中的月份（从checkbox获取，兼容所有浏览器）
+    var monthContainer = document.getElementById('stock-multi-months');
+    var monthCheckboxes = monthContainer.querySelectorAll('input[type="checkbox"]');
+    var selectedMonths = [];
+    
+    // 使用兼容所有浏览器的方式遍历
+    for (var i = 0; i < monthCheckboxes.length; i++) {
+        if (monthCheckboxes[i].checked) {
+            var monthValue = parseInt(monthCheckboxes[i].value);
+            if (!isNaN(monthValue)) {
+                selectedMonths.push(monthValue);
+            }
+        }
+    }
+    
+    // 如果没有选择任何月份，则查询所有月份
+    var months = selectedMonths.length > 0 ? selectedMonths : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     
     if (!code) {
         alert('请输入股票代码');
         return;
     }
     
-    try {
-        const requestBody = {
-            code: code,
-            months: months,
-            start_year: startYear,
-            end_year: endYear
-        };
-        if (dataSource) {
-            requestBody.data_source = dataSource;
-        }
-        
-        const response = await fetch('/api/export/multi-month-statistics', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || '按月统计.xlsx';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        } else {
-            const error = await response.json();
-            alert('导出失败: ' + (error.detail || '未知错误'));
-        }
-    } catch (error) {
-        alert('导出失败: ' + error.message);
+    var requestBody = {
+        code: code,
+        months: months,
+        start_year: startYear,
+        end_year: endYear
+    };
+    if (dataSource) {
+        requestBody.data_source = dataSource;
     }
+    
+    // 使用兼容所有浏览器的fetch
+    fetch('/api/export/multi-month-statistics', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    })
+    .then(function(response) {
+        if (response.ok) {
+            return response.blob().then(function(blob) {
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                
+                // 兼容所有浏览器的文件名获取
+                var contentDisposition = response.headers.get('Content-Disposition');
+                var filename = '按月统计.xlsx';
+                if (contentDisposition) {
+                    var filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+                a.download = filename;
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            });
+        } else {
+            return response.json().then(function(error) {
+                alert('导出失败: ' + (error.detail || '未知错误'));
+            });
+        }
+    })
+    .catch(function(error) {
+        alert('导出失败: ' + error.message);
+    });
 }
 
 // 数据源对比
@@ -1350,115 +1452,351 @@ async function exportCompareSources() {
 }
 
 // 股票代码自动补全
-let stockAutocompleteTimeout = null;
+var stockAutocompleteTimeout = null;
 
 function initStockAutocomplete() {
-    const stockCodeInput = document.getElementById('stock-code');
-    const stockMultiCodeInput = document.getElementById('stock-multi-code');
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:1422',message:'initStockAutocomplete called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(function(){}); 
+    // #endregion
+    var stockCodeInput = document.getElementById('stock-code');
+    var stockMultiCodeInput = document.getElementById('stock-multi-code');
+    var compareCodeInput = document.getElementById('compare-code');
     
-    if (stockCodeInput) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:1426',message:'Input elements found',data:{stockCodeInput:!!stockCodeInput,stockMultiCodeInput:!!stockMultiCodeInput},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(function(){}); 
+    // #endregion
+    
+    // 为单月统计输入框初始化自动完成
+    if (stockCodeInput && !stockCodeInput.hasAttribute('data-autocomplete-initialized')) {
+        stockCodeInput.setAttribute('data-autocomplete-initialized', 'true');
         stockCodeInput.addEventListener('input', function(e) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:1429',message:'Stock code input event',data:{value:e.target.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(function(){}); 
+            // #endregion
             handleStockAutocomplete(e.target, 'stock-autocomplete');
         });
         stockCodeInput.addEventListener('blur', function() {
-            setTimeout(() => {
-                const dropdown = document.getElementById('stock-autocomplete');
+            // 延迟隐藏，允许点击下拉项
+            setTimeout(function() {
+                var dropdown = document.getElementById('stock-autocomplete');
                 if (dropdown) dropdown.style.display = 'none';
             }, 200);
         });
         stockCodeInput.addEventListener('focus', function(e) {
-            if (e.target.value.length >= 1) {
+            if (e.target.value && e.target.value.length >= 1) {
                 handleStockAutocomplete(e.target, 'stock-autocomplete');
+            }
+        });
+        // 添加键盘导航支持（兼容所有浏览器）
+        stockCodeInput.addEventListener('keydown', function(e) {
+            var dropdown = document.getElementById('stock-autocomplete');
+            if (!dropdown || dropdown.style.display === 'none') return;
+            
+            var items = dropdown.querySelectorAll('.autocomplete-item');
+            if (items.length === 0) return;
+            
+            var currentIndex = -1;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].classList.contains('active')) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentIndex = (currentIndex + 1) % items.length;
+                for (var j = 0; j < items.length; j++) {
+                    items[j].classList.remove('active');
+                }
+                items[currentIndex].classList.add('active');
+                if (items[currentIndex].scrollIntoView) {
+                    items[currentIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+                for (var j = 0; j < items.length; j++) {
+                    items[j].classList.remove('active');
+                }
+                items[currentIndex].classList.add('active');
+                if (items[currentIndex].scrollIntoView) {
+                    items[currentIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            } else if (e.key === 'Enter' && currentIndex >= 0) {
+                e.preventDefault();
+                items[currentIndex].click();
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
             }
         });
     }
     
+    // 为按月统计输入框初始化自动完成
     if (stockMultiCodeInput) {
         stockMultiCodeInput.addEventListener('input', function(e) {
             handleStockAutocomplete(e.target, 'stock-multi-autocomplete');
         });
         stockMultiCodeInput.addEventListener('blur', function() {
-            setTimeout(() => {
-                const dropdown = document.getElementById('stock-multi-autocomplete');
+            // 延迟隐藏，允许点击下拉项
+            setTimeout(function() {
+                var dropdown = document.getElementById('stock-multi-autocomplete');
                 if (dropdown) dropdown.style.display = 'none';
             }, 200);
         });
         stockMultiCodeInput.addEventListener('focus', function(e) {
-            if (e.target.value.length >= 1) {
+            if (e.target.value && e.target.value.length >= 1) {
                 handleStockAutocomplete(e.target, 'stock-multi-autocomplete');
+            }
+        });
+        // 添加键盘导航支持（兼容所有浏览器）
+        stockMultiCodeInput.addEventListener('keydown', function(e) {
+            var dropdown = document.getElementById('stock-multi-autocomplete');
+            if (!dropdown || dropdown.style.display === 'none') return;
+            
+            var items = dropdown.querySelectorAll('.autocomplete-item');
+            if (items.length === 0) return;
+            
+            var currentIndex = -1;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].classList.contains('active')) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentIndex = (currentIndex + 1) % items.length;
+                for (var j = 0; j < items.length; j++) {
+                    items[j].classList.remove('active');
+                }
+                items[currentIndex].classList.add('active');
+                if (items[currentIndex].scrollIntoView) {
+                    items[currentIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+                for (var j = 0; j < items.length; j++) {
+                    items[j].classList.remove('active');
+                }
+                items[currentIndex].classList.add('active');
+                if (items[currentIndex].scrollIntoView) {
+                    items[currentIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            } else if (e.key === 'Enter' && currentIndex >= 0) {
+                e.preventDefault();
+                items[currentIndex].click();
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+    
+    // 为数据源对比输入框初始化自动完成
+    if (compareCodeInput && !compareCodeInput.hasAttribute('data-autocomplete-initialized')) {
+        compareCodeInput.setAttribute('data-autocomplete-initialized', 'true');
+        compareCodeInput.addEventListener('input', function(e) {
+            handleStockAutocomplete(e.target, 'compare-autocomplete');
+        });
+        compareCodeInput.addEventListener('blur', function() {
+            // 延迟隐藏，允许点击下拉项
+            setTimeout(function() {
+                var dropdown = document.getElementById('compare-autocomplete');
+                if (dropdown) dropdown.style.display = 'none';
+            }, 200);
+        });
+        compareCodeInput.addEventListener('focus', function(e) {
+            if (e.target.value && e.target.value.length >= 1) {
+                handleStockAutocomplete(e.target, 'compare-autocomplete');
+            }
+        });
+        // 添加键盘导航支持（兼容所有浏览器）
+        compareCodeInput.addEventListener('keydown', function(e) {
+            var dropdown = document.getElementById('compare-autocomplete');
+            if (!dropdown || dropdown.style.display === 'none') return;
+            
+            var items = dropdown.querySelectorAll('.autocomplete-item');
+            if (items.length === 0) return;
+            
+            var currentIndex = -1;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].classList.contains('active')) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentIndex = (currentIndex + 1) % items.length;
+                for (var j = 0; j < items.length; j++) {
+                    items[j].classList.remove('active');
+                }
+                items[currentIndex].classList.add('active');
+                if (items[currentIndex].scrollIntoView) {
+                    items[currentIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+                for (var j = 0; j < items.length; j++) {
+                    items[j].classList.remove('active');
+                }
+                items[currentIndex].classList.add('active');
+                if (items[currentIndex].scrollIntoView) {
+                    items[currentIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            } else if (e.key === 'Enter' && currentIndex >= 0) {
+                e.preventDefault();
+                items[currentIndex].click();
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
             }
         });
     }
 }
 
-async function handleStockAutocomplete(inputElement, dropdownId) {
-    const keyword = inputElement.value.trim();
-    const dropdown = document.getElementById(dropdownId);
+function handleStockAutocomplete(inputElement, dropdownId) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:1535',message:'handleStockAutocomplete called',data:{keyword:inputElement.value.trim(),dropdownId:dropdownId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(function(){}); 
+    // #endregion
+    var keyword = inputElement.value.trim();
+    var dropdown = document.getElementById(dropdownId);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:1540',message:'Dropdown element check',data:{dropdownExists:!!dropdown,keywordLength:keyword.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(function(){}); 
+    // #endregion
     
     if (!dropdown) return;
     
-    if (stockAutocompleteTimeout) clearTimeout(stockAutocompleteTimeout);
+    if (stockAutocompleteTimeout) {
+        clearTimeout(stockAutocompleteTimeout);
+    }
     
     if (keyword.length < 1) {
         dropdown.style.display = 'none';
         return;
     }
     
-    stockAutocompleteTimeout = setTimeout(async () => {
-        try {
-            const response = await fetch('/api/stocks/search?keyword=' + encodeURIComponent(keyword) + '&limit=10');
-            const result = await response.json();
-            
-            if (result.success && result.data && result.data.length > 0) {
-                displayStockAutocomplete(result.data, dropdown, inputElement);
-            } else {
+    // 使用兼容所有浏览器的setTimeout和fetch
+    stockAutocompleteTimeout = setTimeout(function() {
+        // 使用fetch API（现代浏览器支持，IE11需要polyfill，但这里假设已支持）
+        fetch('/api/stocks/search?keyword=' + encodeURIComponent(keyword) + '&limit=10')
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(function(result) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/e0faeb7e-95cd-4fa7-be5d-ce4cdc8bf3c3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:1560',message:'Search API response',data:{success:result.success,dataLength:result.data?result.data.length:0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(function(){}); 
+                // #endregion
+                if (result.success && result.data && result.data.length > 0) {
+                    displayStockAutocomplete(result.data, dropdown, inputElement);
+                } else {
+                    dropdown.style.display = 'none';
+                }
+            })
+            .catch(function(error) {
+                // 兼容所有浏览器的错误处理
+                if (typeof console !== 'undefined' && console.error) {
+                    console.error('搜索股票失败:', error);
+                }
                 dropdown.style.display = 'none';
-            }
-        } catch (error) {
-            console.error('搜索股票失败:', error);
-            dropdown.style.display = 'none';
-        }
+            });
     }, 300);
 }
 
 function displayStockAutocomplete(results, dropdown, inputElement) {
     dropdown.innerHTML = '';
     
-    results.forEach(stock => {
-        const item = document.createElement('div');
-        item.className = 'autocomplete-item';
-        const symbol = stock.symbol || stock.ts_code;
-        const name = stock.name || '';
-        const exchange = stock.exchange || '';
-        item.innerHTML = '<strong>' + symbol + '</strong> <span class="text-muted">' + name + '</span><small class="text-muted ms-2">' + exchange + '</small>';
+    if (!results || results.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    // 使用兼容所有浏览器的方式遍历（包括IE11+）
+    // 使用立即执行函数（IIFE）解决闭包问题
+    for (var i = 0; i < results.length; i++) {
+        (function(index) {
+            var stock = results[index];
+            var item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            var symbol = stock.symbol || stock.ts_code || '';
+            var name = stock.name || '';
+            var exchange = stock.exchange || '';
+            
+            // 将symbol存储在data属性中，确保点击时能正确获取
+            item.setAttribute('data-symbol', symbol);
+            
+            // 使用textContent和innerHTML的组合，确保兼容性
+            item.innerHTML = '<strong>' + escapeHtml(symbol) + '</strong> <span class="text-muted">' + escapeHtml(name) + '</span><small class="text-muted ms-2">' + escapeHtml(exchange) + '</small>';
+            
+            // 点击选择 - 使用data属性获取symbol，避免闭包问题
+            item.addEventListener('click', function() {
+                var selectedSymbol = this.getAttribute('data-symbol');
+                inputElement.value = selectedSymbol;
+                dropdown.style.display = 'none';
+                // 兼容所有浏览器的事件触发
+                if (typeof Event !== 'undefined') {
+                    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                } else {
+                    // IE11兼容
+                    var evt = document.createEvent('HTMLEvents');
+                    evt.initEvent('input', true, true);
+                    inputElement.dispatchEvent(evt);
+                }
+            });
         
-        item.addEventListener('click', function() {
-            inputElement.value = symbol;
-            dropdown.style.display = 'none';
-            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-        
-        item.addEventListener('mouseenter', function() {
-            item.style.backgroundColor = '#f0f0f0';
-        });
-        
-        item.addEventListener('mouseleave', function() {
-            item.style.backgroundColor = '';
-        });
-        
-        dropdown.appendChild(item);
-    });
+            // 鼠标悬停高亮
+            item.addEventListener('mouseenter', function() {
+                item.style.backgroundColor = '#f8f9fa';
+                // 移除其他项的active类
+                var allItems = dropdown.querySelectorAll('.autocomplete-item');
+                for (var j = 0; j < allItems.length; j++) {
+                    if (allItems[j] !== item) {
+                        allItems[j].classList.remove('active');
+                    }
+                }
+                item.classList.add('active');
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                // 保持active类以便键盘导航
+            });
+            
+            dropdown.appendChild(item);
+        })(i);
+    }
     
     dropdown.style.display = 'block';
     
-    // 获取输入框的位置（相对于其父容器）
-    const inputRect = inputElement.getBoundingClientRect();
-    const parentRect = inputElement.offsetParent ? inputElement.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
+    // 计算下拉框位置（兼容所有浏览器）
+    var inputRect = inputElement.getBoundingClientRect();
+    var parentElement = inputElement.offsetParent || inputElement.parentElement;
+    var parentRect = parentElement ? parentElement.getBoundingClientRect() : { left: 0, top: 0 };
     
-    // 计算相对于父容器的位置
+    // 设置位置（相对于父容器）
     dropdown.style.top = (inputElement.offsetTop + inputElement.offsetHeight) + 'px';
     dropdown.style.left = inputElement.offsetLeft + 'px';
     dropdown.style.width = inputElement.offsetWidth + 'px';
+    dropdown.style.minWidth = inputElement.offsetWidth + 'px';
+}
+
+// HTML转义函数，防止XSS攻击并确保兼容性
+function escapeHtml(text) {
+    if (!text) return '';
+    var map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
 // ========== 认证和权限管理 ==========

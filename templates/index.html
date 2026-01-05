@@ -81,6 +81,37 @@
         .autocomplete-item small {
             font-size: 0.85em;
         }
+        
+        .autocomplete-item.active {
+            background-color: #e7f3ff !important;
+        }
+        
+        /* 月份多选框样式 */
+        .month-checkbox-group {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            min-height: 80px;
+        }
+        
+        .month-checkbox-group .form-check {
+            margin-right: 15px;
+            margin-bottom: 8px;
+        }
+        
+        .month-checkbox-group .form-check-label {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        
+        .month-checkbox-group .form-check-input {
+            cursor: pointer;
+            margin-top: 0.25em;
+        }
     </style>
 </head>
 <body>
@@ -288,21 +319,61 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">选择月份（可多选）</label>
-                                <select class="form-select" id="stock-multi-months" multiple size="4">
-                                    <option value="1">1月</option>
-                                    <option value="2">2月</option>
-                                    <option value="3">3月</option>
-                                    <option value="4">4月</option>
-                                    <option value="5">5月</option>
-                                    <option value="6">6月</option>
-                                    <option value="7">7月</option>
-                                    <option value="8">8月</option>
-                                    <option value="9">9月</option>
-                                    <option value="10">10月</option>
-                                    <option value="11">11月</option>
-                                    <option value="12">12月</option>
-                                </select>
-                                <small class="form-text text-muted">按住Ctrl/Cmd键可多选，不选择则查询所有月份</small>
+                                <div id="stock-multi-months" class="month-checkbox-group">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-1" value="1" checked>
+                                        <label class="form-check-label" for="month-1">1月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-2" value="2" checked>
+                                        <label class="form-check-label" for="month-2">2月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-3" value="3" checked>
+                                        <label class="form-check-label" for="month-3">3月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-4" value="4" checked>
+                                        <label class="form-check-label" for="month-4">4月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-5" value="5" checked>
+                                        <label class="form-check-label" for="month-5">5月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-6" value="6" checked>
+                                        <label class="form-check-label" for="month-6">6月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-7" value="7" checked>
+                                        <label class="form-check-label" for="month-7">7月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-8" value="8" checked>
+                                        <label class="form-check-label" for="month-8">8月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-9" value="9" checked>
+                                        <label class="form-check-label" for="month-9">9月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-10" value="10" checked>
+                                        <label class="form-check-label" for="month-10">10月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-11" value="11" checked>
+                                        <label class="form-check-label" for="month-11">11月</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="month-12" value="12" checked>
+                                        <label class="form-check-label" for="month-12">12月</label>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllMonths()">全选</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllMonths()">清空</button>
+                                    <small class="form-text text-muted d-block mt-1">不选择则查询所有月份</small>
+                                </div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">起始年份</label>
@@ -474,9 +545,10 @@
                 </div>
                 <div class="card-body">
                     <div class="row mb-3">
-                        <div class="col-md-3">
+                        <div class="col-md-3" style="position: relative;">
                             <label class="form-label">股票代码</label>
-                            <input type="text" class="form-control" id="compare-code" placeholder="如: 000001">
+                            <input type="text" class="form-control" id="compare-code" placeholder="输入代码或名称" autocomplete="off">
+                            <div id="compare-autocomplete" class="autocomplete-dropdown" style="display: none;"></div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">年份</label>
