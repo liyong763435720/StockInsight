@@ -5,10 +5,27 @@ let currentUser = null;
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 设置当前年份
-    const currentYearElement = document.getElementById('current-year');
+    var currentYearElement = document.getElementById('current-year');
     if (currentYearElement) {
         currentYearElement.textContent = new Date().getFullYear();
     }
+    
+    // 设置所有结束年份字段为当前年份
+    var currentYear = new Date().getFullYear();
+    var endYearElements = [
+        'stock-end-year',
+        'stock-multi-end-year',
+        'filter-end-year',
+        'industry-end-year',
+        'compare-year'
+    ];
+    for (var i = 0; i < endYearElements.length; i++) {
+        var element = document.getElementById(endYearElements[i]);
+        if (element) {
+            element.value = currentYear;
+        }
+    }
+    
     checkLoginStatus();
 });
 
